@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
-const MapView = () => {
-  const mapRef = useRef<HTMLDivElement | null>(null);
+export default function MapView() {
+  const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -25,8 +25,7 @@ const MapView = () => {
       name: 'Enchey Monastery',
       lat: 27.3314,
       lng: 88.6138,
-      description:
-        "A 200-year-old monastery meaning 'solitary temple'",
+      description: "A 200-year-old monastery meaning 'solitary temple'",
       slug: 'enchey-monastery',
     },
     {
@@ -74,31 +73,29 @@ const MapView = () => {
       name: 'Sang Monastery',
       lat: 27.2333,
       lng: 88.2667,
-      description:
-        'Historic monastery with beautiful architecture',
+      description: 'Historic monastery with beautiful architecture',
       slug: 'sang-monastery',
     },
   ];
 
   useEffect(() => {
-    let map: any;
+    let mounted = true;
 
-    const loadMap = async () => {
+    const initializeMap = async () => {
       try {
-        const L = (await import('leaflet')).default;
+        const leaflet = await import('leaflet');
+        const L = leaflet.default;
 
-        if (!mapRef.current) return;
+        if (!mounted || !mapRef.current) return;
 
-        // Remove existing map
         if (mapInstanceRef.current) {
           mapInstanceRef.current.remove();
-          mapInstanceRef.current = null;
         }
 
-        map = L.map(mapRef.current, {
-          zoomControl: true,
-          scrollWheelZoom: true,
-        }).setView([27.3389, 88.6065], 10);
+        const map = L.map(mapRef.current).setView(
+          [27.3389, 88.6065],
+          10
+        );
 
         L.tileLayer(
           'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -158,40 +155,41 @@ const MapView = () => {
               </a>
             </div>
           `);
-
-          marker.on('mouseover', function () {
-            this.openPopup();
-          });
         });
 
         mapInstanceRef.current = map;
-        setIsLoading(false);
+
+        if (mounted) {
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('Map loading error:', error);
-        setMapError(true);
-        setIsLoading(false);
+
+        if (mounted) {
+          setMapError(true);
+          setIsLoading(false);
+        }
       }
     };
 
-    const leafletCss = document.createElement('link');
-    leafletCss.rel = 'stylesheet';
-    leafletCss.href =
-      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 
-    leafletCss.onload = () => {
-      loadMap();
-    };
+    document.head.appendChild(link);
 
-    document.head.appendChild(leafletCss);
+    initializeMap();
 
     return () => {
+      mounted = false;
+
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
 
-      if (leafletCss.parentNode) {
-        leafletCss.parentNode.removeChild(leafletCss);
+      if (document.head.contains(link)) {
+        document.head.removeChild(link);
       }
     };
   }, []);
@@ -206,7 +204,7 @@ const MapView = () => {
 
   return (
     <div className="w-full">
-      <div className="text-center mb-4">
+      <div className="mb-4 text-center">
         <h1 className="text-2xl font-bold">
           Sacred Monasteries of Sikkim
         </h1>
@@ -224,11 +222,9 @@ const MapView = () => {
 
         <div
           ref={mapRef}
-          className="w-full h-[600px] rounded-xl shadow-lg"
+          className="h-[600px] w-full rounded-xl shadow-lg"
         />
       </div>
     </div>
   );
-};
-
-export default MapView;
+}
